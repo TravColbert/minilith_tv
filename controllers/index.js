@@ -49,7 +49,7 @@ module.exports = function (app) {
         }
       })
       console.log("VLC response:", await response.text())
-      res.json({ status: "playing", id: id })
+      res.locals.render.status = { status: "playing", id: id }
     },
     pause: async function (req, res) {
       const id = req.params.id
@@ -61,7 +61,7 @@ module.exports = function (app) {
         }
       })
       console.log("VLC response:", await response.text())
-      res.json({ status: "paused", id: id })
+      res.locals.render.status = { status: "paused", id: id }
     },
     status: async function (req, res) {
       console.log("Fetching VLC status")
@@ -86,7 +86,7 @@ module.exports = function (app) {
         }
       })
       console.log("VLC response:", await response.text())
-      res.json({ status: "stopped", id: id })
+      res.locals.render.status = { status: "stopped", id: id }
     },
     volumeUp: async function (req, res) {
       console.log("Increasing VLC volume")
@@ -97,7 +97,7 @@ module.exports = function (app) {
         }
       })
       console.log("VLC response:", await response.text())
-      res.json({ status: "volume increased" })
+      res.locals.render.status = { status: "volume increased" }
     },
     volumeDown: async function (req, res) {
       console.log("Decreasing VLC volume")
@@ -108,7 +108,7 @@ module.exports = function (app) {
         }
       })
       console.log("VLC response:", await response.text())
-      res.json({ status: "volume decreased" })
+      res.locals.render.status = { status: "volume decreased" }
     },
     seekPlus10Seconds: async function (req, res) {
       console.log("Seeking forward 10 seconds in VLC")
@@ -119,7 +119,7 @@ module.exports = function (app) {
         }
       })
       console.log("VLC response:", await response.text())
-      res.json({ status: "seeked forward 10 seconds" })
+      res.locals.render.status = { status: "seeked forward 10 seconds" }
     },
     seekMinus10Seconds: async function (req, res) {
       console.log("Seeking backward 10 seconds in VLC")
@@ -130,7 +130,7 @@ module.exports = function (app) {
         }
       })
       console.log("VLC response:", await response.text())
-      res.json({ status: "seeked backward 10 seconds" })
+      res.locals.render.status = { status: "seeked backward 10 seconds" }
     }
   }
 }
