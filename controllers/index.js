@@ -51,6 +51,18 @@ module.exports = function (app) {
       console.log("VLC response:", await response.text())
       res.json({ status: "playing", id: id })
     },
+    pause: async function (req, res) {
+      const id = req.params.id
+      console.log(`Pausing media item: ${id}`)
+      const response = await fetch(`${app.locals.vlcUrl}?command=pl_pause`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+        }
+      })
+      console.log("VLC response:", await response.text())
+      res.json({ status: "paused", id: id })
+    },
     status: async function (req, res) {
       console.log("Fetching VLC status")
       const response = await fetch(`${app.locals.vlcUrl}`, {

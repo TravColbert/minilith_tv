@@ -14,6 +14,9 @@ module.exports = function (app) {
   router.route("/library/:id/play")
     .get(controller.play)
 
+  router.route("/library/:id/pause")
+    .get(controller.pause)
+
   router.route("/library/:id/status")
     .get(controller.status)
 
