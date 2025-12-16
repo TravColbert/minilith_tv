@@ -42,7 +42,7 @@ module.exports = function (app) {
     play: async function (req, res) {
       const id = req.params.id
       console.log(`Playing media item: ${id}`)
-      const response = await fetch(`${app.locals.vlcUrl}?command=pl_play&input=file:///${getFile(id)}`, {
+      const response = await fetch(`${app.locals.vlcUrl}?command=in_play&input=file:///${getFile(id)}`, {
         method: 'GET',
         headers: {
           'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
@@ -90,7 +90,7 @@ module.exports = function (app) {
     },
     volumeUp: async function (req, res) {
       console.log("Increasing VLC volume")
-      const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=+10`, {
+      const response = await fetch(`${app.locals.vlcUrl}?volume&val=+10`, {
         method: 'GET',
         headers: {
           'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
@@ -101,7 +101,7 @@ module.exports = function (app) {
     },
     volumeDown: async function (req, res) {
       console.log("Decreasing VLC volume")
-      const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=-10`, {
+      const response = await fetch(`${app.locals.vlcUrl}?volume&val=-10`, {
         method: 'GET',
         headers: {
           'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
@@ -109,6 +109,28 @@ module.exports = function (app) {
       })
       console.log("VLC response:", await response.text())
       res.json({ status: "volume decreased" })
+    },
+    seekPlus10seconds: async function (req, res) {
+      console.log("Seeking forward 10 seconds in VLC")
+      const response = await fetch(`${app.locals.vlcUrl}?seek&val=+10S`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+        }
+      })
+      console.log("VLC response:", await response.text())
+      res.json({ status: "seeked forward 10 seconds" })
+    },
+    seekMinus10seconds: async function (req, res) {
+      console.log("Seeking backward 10 seconds in VLC")
+      const response = await fetch(`${app.locals.vlcUrl}?seek&val=-10S`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+        }
+      })
+      console.log("VLC response:", await response.text())
+      res.json({ status: "seeked backward 10 seconds" })
     }
   }
 }
