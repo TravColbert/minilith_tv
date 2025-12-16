@@ -5,8 +5,8 @@ const path = require("path")
 
 module.exports = function (app) {
   const getLibrary = async function () {
-    // get a list of files from the filesystem by reading from th elibraryPaths
-    const fullPath = path.join(__dirname, app.locals.libraryPaths[0])
+    // get a list of files from the filesystem by reading from the libraryPaths
+    const fullPath = path.join(app.locals.libraryPaths[0])
     const dir = await fs.opendir(fullPath)
     const files = []
     for await (const dirent of dir) {
@@ -26,6 +26,11 @@ module.exports = function (app) {
     files.sort((a, b) => a.name.localeCompare(b.name))
     return files
   }
+  
+  const getFile = function (filename) {
+    // get the full path for the provided file
+    return path.join(app.locals.libraryPaths[0], filename)
+  }
 
   return {
     library: async function (req, res) {
@@ -37,7 +42,12 @@ module.exports = function (app) {
     play: async function (req, res) {
       const id = req.params.id
       console.log(`Playing media item: ${id}`)
-      const response = await fetch(`${app.locals.vlcUrl}in_play&input=file:///${id}`)
+      const response = await fetch(`${app.locals.vlcUrl}in_play&input=file:///${getFile(id)}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+        }
+    })
       console.log("VLC response:", await response.text())
       res.json({ status: "playing", id: id })
     },
