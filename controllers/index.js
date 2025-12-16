@@ -4,11 +4,25 @@ const path = require("path")
 
 
 module.exports = function (app) {
+  const vlcAuthHeader = {
+    method: 'GET',
+    headers: {
+      'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+    }
+  }
+
   const getLibrary = async function () {
+    const files = []
     // get a list of files from the filesystem by reading from the libraryPaths
     const fullPath = path.join(app.locals.libraryPaths[0])
+    // If the directory does not exist, return an empty array
+    try {
+      await fs.access(fullPath)
+    } catch (err) {
+      console.warn(`Library path does not exist: ${fullPath}`)
+      return files
+    }
     const dir = await fs.opendir(fullPath)
-    const files = []
     for await (const dirent of dir) {
       if (dirent.isFile()) {
         const ext = path.extname(dirent.name).toLowerCase()
@@ -42,35 +56,20 @@ module.exports = function (app) {
     play: async function (req, res) {
       const id = req.params.id
       console.log(`Playing media item: ${id}`)
-      const response = await fetch(`${app.locals.vlcUrl}?command=in_play&input=file:///${getFile(id)}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
-        }
-      })
+      const response = await fetch(`${app.locals.vlcUrl}?command=in_play&input=file:///${getFile(id)}`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       res.locals.render.status = { status: "playing", id: id }
     },
     pause: async function (req, res) {
       const id = req.params.id
       console.log(`Pausing media item: ${id}`)
-      const response = await fetch(`${app.locals.vlcUrl}?command=pl_pause`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
-        }
-      })
+      const response = await fetch(`${app.locals.vlcUrl}?command=pl_pause`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       res.locals.render.status = { status: "paused", id: id }
     },
     status: async function (req, res) {
       console.log("Fetching VLC status")
-      const response = await fetch(`${app.locals.vlcUrl}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
-        }
-      })
+      const response = await fetch(`${app.locals.vlcUrl}`, vlcAuthHeader)
       const text = await response.text()
       console.log("VLC status response:", text)
       res.type('application/xml')
@@ -79,56 +78,31 @@ module.exports = function (app) {
     stop: async function (req, res) {
       const id = req.params.id
       console.log(`Stopping media item: ${id}`)
-      const response = await fetch(`${app.locals.vlcUrl}?command=pl_stop`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
-        }
-      })
+      const response = await fetch(`${app.locals.vlcUrl}?command=pl_stop`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       res.locals.render.status = { status: "stopped", id: id }
     },
     volumeUp: async function (req, res) {
       console.log("Increasing VLC volume")
-      const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=%2B10`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
-        }
-      })
+      const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=%2B10`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       res.locals.render.status = { status: "volume increased" }
     },
     volumeDown: async function (req, res) {
       console.log("Decreasing VLC volume")
-      const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=%2D10`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
-        }
-      })
+      const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=%2D10`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       res.locals.render.status = { status: "volume decreased" }
     },
     seekPlus10Seconds: async function (req, res) {
       console.log("Seeking forward 10 seconds in VLC")
-      const response = await fetch(`${app.locals.vlcUrl}?command=seek&val=%2B10`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
-        }
-      })
+      const response = await fetch(`${app.locals.vlcUrl}?command=seek&val=%2B10`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       res.locals.render.status = { status: "seeked forward 10 seconds" }
     },
     seekMinus10Seconds: async function (req, res) {
       console.log("Seeking backward 10 seconds in VLC")
-      const response = await fetch(`${app.locals.vlcUrl}?command=seek&val=%2D10`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
-        }
-      })
+      const response = await fetch(`${app.locals.vlcUrl}?command=seek&val=%2D10`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       res.locals.render.status = { status: "seeked backward 10 seconds" }
     }
