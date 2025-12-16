@@ -26,7 +26,7 @@ module.exports = function (app) {
     files.sort((a, b) => a.name.localeCompare(b.name))
     return files
   }
-  
+
   const getFile = function (filename) {
     // get the full path for the provided file
     return path.join(app.locals.libraryPaths[0], filename)
@@ -42,21 +42,61 @@ module.exports = function (app) {
     play: async function (req, res) {
       const id = req.params.id
       console.log(`Playing media item: ${id}`)
-      const response = await fetch(`${app.locals.vlcUrl}in_play&input=file:///${getFile(id)}`, {
+      const response = await fetch(`${app.locals.vlcUrl}?command=pl_play&input=file:///${getFile(id)}`, {
         method: 'GET',
         headers: {
-            'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
         }
-    })
+      })
       console.log("VLC response:", await response.text())
       res.json({ status: "playing", id: id })
+    },
+    status: async function (req, res) {
+      console.log("Fetching VLC status")
+      const response = await fetch(`${app.locals.vlcUrl}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+        }
+      })
+      const text = await response.text()
+      console.log("VLC status response:", text)
+      res.type('application/xml')
+      res.send(text)
     },
     stop: async function (req, res) {
       const id = req.params.id
       console.log(`Stopping media item: ${id}`)
-      const response = await fetch(`${app.locals.vlcUrl}pl_stop`)
+      const response = await fetch(`${app.locals.vlcUrl}?command=pl_stop`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+        }
+      })
       console.log("VLC response:", await response.text())
       res.json({ status: "stopped", id: id })
+    },
+    volumeUp: async function (req, res) {
+      console.log("Increasing VLC volume")
+      const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=+10`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+        }
+      })
+      console.log("VLC response:", await response.text())
+      res.json({ status: "volume increased" })
+    },
+    volumeDown: async function (req, res) {
+      console.log("Decreasing VLC volume")
+      const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=-10`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`:${app.locals.vlcPassword}`).toString('base64')
+        }
+      })
+      console.log("VLC response:", await response.text())
+      res.json({ status: "volume decreased" })
     }
   }
 }
