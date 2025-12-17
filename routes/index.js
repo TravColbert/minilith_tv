@@ -8,35 +8,35 @@ module.exports = function (app) {
   // Require the controller with the same name as the router
   const controller = require(path.join('../', app.locals.controllerPath, currentRouteName))(app)
 
-  router.route("/library/:id/stop")
-    .get(controller.stop)
+  router.route("/library/stop")
+    .get(controller.stop, controller.status, controller.render)
+
+  router.route("/library/pause")
+    .get(controller.pause, controller.status, controller.render)
+
+  router.route("/library/status")
+    .get(controller.status, controller.render)
+
+  router.route("/library/volume-up")
+    .get(controller.volumeUp, controller.status, controller.render)
+
+  router.route("/library/volume-down")
+    .get(controller.volumeDown, controller.status, controller.render)
+
+  router.route("/library/seek-forward")
+    .get(controller.seekPlus10Seconds, controller.status, controller.render)
+
+  router.route("/library/seek-backward")
+    .get(controller.seekMinus10Seconds, controller.status, controller.render)
 
   router.route("/library/:id/play")
-    .get(controller.play)
-
-  router.route("/library/:id/pause")
-    .get(controller.pause)
-
-  router.route("/library/:id/status")
-    .get(controller.status)
-
-  router.route("/library/:id/volume-up")
-    .get(controller.volumeUp)
-
-  router.route("/library/:id/volume-down")
-    .get(controller.volumeDown)
-
-  router.route("/library/:id/seek-forward")
-    .get(controller.seekPlus10Seconds)
-
-  router.route("/library/:id/seek-backward")
-    .get(controller.seekMinus10Seconds)
+    .get(controller.play, controller.status, controller.render)
 
   router.route("/library")
-    .get(controller.library)
+    .get(controller.status, controller.library, controller.render)
 
   router.route("/")
-    .get((_req, res) => res.render("library"))
+    .get((_req, res) => res.render("home"))
 
   return router
 }

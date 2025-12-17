@@ -18,9 +18,11 @@
   --spacing-xl: 2rem;
   
   /* Layout */
-  --toolbar-height: 60px;
+  --toolbar-top-height: 60px;
+  --toolbar-bottom-height: 100px;
   --toolbar-padding: 1rem;
   --max-content-width: 1200px;
+  --button-min-width: 100px;
   
   /* Typography */
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -60,8 +62,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding-top: var(--toolbar-height);
-  padding-bottom: var(--toolbar-height);
+  padding-top: var(--toolbar-top-height);
+  padding-bottom: var(--toolbar-bottom-height);
 }
 
 /* ===== Top Toolbar ===== */
@@ -70,7 +72,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: var(--toolbar-height);
+  height: var(--toolbar-top-height);
   background-color: var(--color-background);
   border-bottom: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
@@ -224,12 +226,12 @@ body {
 }
 
 /* ===== Bottom Toolbar ===== */
-.bottom-toolbar {
+#bottom-toolbar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--toolbar-height);
+  height: var(--toolbar-bottom-height);
   background-color: var(--color-background);
   border-top: 1px solid var(--color-border);
   box-shadow: 0 -1px 3px var(--color-shadow);
@@ -242,11 +244,34 @@ body {
 
 .bottom-toolbar-content {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: space-around;
   width: 100%;
   max-width: 600px;
-  gap: var(--spacing-md);
+  height: 100%;
+}
+
+.playing-info {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-around;
+  align-items: baseline;
+}
+
+.playing-info div {
+  display:flex;
+  flex-direction: row;
+}
+
+.playing-file-name span {
+  font-size: var(--font-size-lg);
+}
+
+.playing-controls {
+  display: flex;
+  flex-direction: row;
 }
 
 .toolbar-action {
@@ -254,7 +279,6 @@ body {
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-sm);
   color: var(--color-text-secondary);
   text-decoration: none;
   font-size: var(--font-size-sm);
@@ -262,6 +286,7 @@ body {
   border-radius: var(--border-radius);
   flex: 1;
   text-align: center;
+  min-width: var(--button-min-width);
 }
 
 .toolbar-action:hover,
@@ -276,6 +301,7 @@ body {
 
 .toolbar-action-label {
   font-size: 12px;
+  white-space: nowrap;
 }
 
 /* ===== Mobile Styles ===== */
@@ -296,7 +322,7 @@ body {
   
   .nav-menu {
     position: fixed;
-    top: var(--toolbar-height);
+    top: var(--toolbar-top-height);
     left: 0;
     right: 0;
     flex-direction: column;

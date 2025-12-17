@@ -1,0 +1,91 @@
+ul.media-list
+  if library
+    if library.length > 0
+      each file in library
+        li.media-item(
+          hx-get=`/library/${file.name}/play`
+          hx-target="#bottom-toolbar"
+          hx-select="#bottom-toolbar"
+          hx-swap="outerHTML"
+        )
+          img.media-thumbnail(
+            src='/images/placeholder.png'
+            alt=`Thumbnail for ${file.name}`
+          )
+          .media-info
+            h3.media-title= file.name
+            p.media-description= file.path
+  else
+    .empty
+      h3 No files found
+
+- console.log(status?.state?.toLowerCase())
+- const playState = (status?.state?.toLowerCase() != "stopped")
+- console.log(playState)
+- const refreshTime = (["playing"].includes(status?.state?.toLowerCase())) ? 1 : 5
+- console.log("Refresh time:", refreshTime)
+footer#bottom-toolbar
+  if playState
+    .bottom-toolbar-content(
+      hx-get="/library/status"
+      hx-trigger=`every ${refreshTime}s`
+      hx-target="#bottom-toolbar"
+      hx-select="#bottom-toolbar"
+      hx-swap="outerHTML")
+      .playing-info
+        div.playing-file-name
+          span= status.name
+        div.playing-file-state
+          span= status.state
+        div.playing-file-info
+          div
+            span #{status.time} of #{status.length}
+          div
+            span= status.position
+          div
+            span= status.volume
+      .playing-controls
+        a.toolbar-action(
+          hx-get=`/library/pause`
+          hx-target="#bottom-toolbar"
+          hx-select="#bottom-toolbar"
+          hx-swap="outerHTML")
+          span.toolbar-action-icon &#x23EF;
+          span.toolbar-action-label Pause
+        a.toolbar-action(
+          hx-get=`/library/stop`
+          hx-target="#bottom-toolbar"
+          hx-select="#bottom-toolbar"
+          hx-swap="outerHTML")
+          span.toolbar-action-icon &#x23F9;
+          span.toolbar-action-label Stop
+        a.toolbar-action(
+          hx-get=`/library/volume-down`
+          hx-target="#bottom-toolbar"
+          hx-select="#bottom-toolbar"
+          hx-swap="outerHTML")
+          span.toolbar-action-icon 🔉
+          span.toolbar-action-label Vol Down
+        a.toolbar-action(
+          hx-get=`/library/volume-up`
+          hx-target="#bottom-toolbar"
+          hx-select="#bottom-toolbar"
+          hx-swap="outerHTML")
+          span.toolbar-action-icon 🔊
+          span.toolbar-action-label Vol Up
+        a.toolbar-action(
+          hx-get=`/library/seek-backward`
+          hx-target="#bottom-toolbar"
+          hx-select="#bottom-toolbar"
+          hx-swap="outerHTML")
+          span.toolbar-action-icon &#x23EA
+          span.toolbar-action-label -10s
+        a.toolbar-action(
+          hx-get=`/library/seek-forward`
+          hx-target="#bottom-toolbar"
+          hx-select="#bottom-toolbar"
+          hx-swap="outerHTML")
+          span.toolbar-action-icon &#x23E9
+          span.toolbar-action-label +10s
+  else
+    p Stopped or Disconnected
