@@ -65,7 +65,7 @@ module.exports = function (app) {
   const parseXML = function (xmlString, regex, notFoundValue = null, captureGroup = 1) {
     if (!regex || !xmlString) return notFoundValue
     const found = regex.exec(xmlString)
-    if (found && found.length > 1) return found[1]
+    if (found && found.length > 1) return found[captureGroup]
     return notFoundValue
   }
 
@@ -78,7 +78,7 @@ module.exports = function (app) {
     return `${Math.round(position * 100)}%`
   }
 
-  const calulateTime = function (seconds) {
+  const calculateTime = function (seconds) {
     const min = Math.floor((seconds / 60))
     const sec = (seconds % 60)
     return `${min}:${sec}`
@@ -123,13 +123,13 @@ module.exports = function (app) {
       app.locals.debug && console.debug("VLC status response:", xmlText)
 
       // Let's pick out some important stuff using regex
-      status.volume = calculateVolume(parseXML(xmlText, /\<volume\>(\d*)\<\/volume\>/))
-      status.fullscreen = parseXML(xmlText, /\<fullscreen\>([^\<\>]*)\<\/fullscreen\>/)
-      status.position = calculatePosition(parseXML(xmlText, /\<position\>([\d\.]*)\<\/position\>/))
-      status.time = calulateTime(parseXML(xmlText, /\<time\>(\d*)\<\/time\>/))
-      status.state = parseXML(xmlText, /\<state\>([^\<\>]*)\<\/state\>/, "disconnected")
-      status.length = calulateTime(parseXML(xmlText, /\<length\>(\d*)\<\/length\>/))
-      status.name = parseXML(xmlText, /\<info name='filename'\>([^\<\>]*)\<\/info\>/)
+      status.volume = calculateVolume(parseXML(xmlText, /<volume>(\d*)<\/volume>/))
+      status.fullscreen = parseXML(xmlText, /<fullscreen>([^<>]*)<\/fullscreen>/)
+      status.position = calculatePosition(parseXML(xmlText, /<position>([\d\.]*)<\/position>/))
+      status.time = calculateTime(parseXML(xmlText, /<time>(\d*)<\/time>/))
+      status.state = parseXML(xmlText, /<state>([^<>]*)<\/state>/, "disconnected")
+      status.length = calculateTime(parseXML(xmlText, /<length>(\d*)<\/length>/))
+      status.name = parseXML(xmlText, /<info name='filename'>([^<>]*)<\/info>/)
 
       app.locals.debug && console.debug("VLC parsed response:", status)
       res.locals.render.status = status
