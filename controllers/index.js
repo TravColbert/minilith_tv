@@ -41,7 +41,7 @@ module.exports = function (app) {
     const dir = await fs.opendir(libraryPath)
 
     for await (const dirent of dir) {
-      if (dirent.isFile()) {
+      if (dirent.isFile() && dirent.parentPath && dirent.name) {
         const ext = path.extname(dirent.name).toLowerCase()
 
         // Make sure it is one of the approved file extensions
@@ -156,21 +156,27 @@ module.exports = function (app) {
 
     console.dir(app.locals.tmdbConfiguration, { depth: null })
 
-    if (data.results && data.results.length > 0) {
-      const movieData = data.results[0]
-      record.tmdbId = movieData.id
-      record.title = movieData.title
-      // Truncate desciption to 1000 characters
-      record.description = movieData.overview ? movieData.overview.substring(0, 1000) : null
-      record.needsResync = false
-      record.poster = app.locals.tmdbConfiguration.base_url + app.locals.tmdbConfiguration.poster_sizes[0] + movieData.poster_path
-      record.backdrop = app.locals.tmdbConfiguration.base_url + app.locals.tmdbConfiguration.backdrop_sizes[0] + movieData.backdrop_path
-      // Add more fields as needed
-      console.log(`Updating record ID ${record.id} with TMDB ID ${movieData.id}`)
-      return await record.save()
-    } else {
-      console.log(`No TMDB results found for title "${record.title}"`)
-      return
+    try {
+      if (data.results && data.results.length > 0) {
+        const movieData = data.results[0]
+        record.tmdbId = movieData.id
+        // Truncate title to 100 chars
+        record.title = movieData.title.substring(0,100)
+        // Truncate desciption to 1000 characters
+        record.description = movieData.overview ? movieData.overview.substring(0, 1000) : null
+        record.needsResync = false
+        record.poster = app.locals.tmdbConfiguration.base_url + app.locals.tmdbConfiguration.poster_sizes[0] + movieData.poster_path
+        record.backdrop = app.locals.tmdbConfiguration.base_url + app.locals.tmdbConfiguration.backdrop_sizes[0] + movieData.backdrop_path
+        // Add more fields as needed
+        console.log(`Updating record ID ${record.id} with TMDB ID ${movieData.id}`)
+        return await record.save()
+      } else {
+        console.log(`No TMDB results found for title "${record.title}"`)
+        return
+      }
+    } catch(e) {
+      console.error(e)
+      return false
     }
   }
 
