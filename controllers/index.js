@@ -302,9 +302,15 @@ module.exports = function (app) {
      */
     play: async function (req, res, next) {
       const id = req.params.id
-      console.log(`Playing media item: ${id}`)
-      const response = await fetch(`${app.locals.vlcUrl}?command=in_play&input=file:///${getFile(id)}`, vlcAuthHeader)
-      console.log("VLC response:", await response.text())
+      model.findByPk(id)
+        .then(async (movie) => {
+          if (!movie) {
+            console.error("No movie found for id " + id)
+          }
+          console.log(`Playing media item: ${id}: "${movie.path}"`)
+          const response = await fetch(`${app.locals.vlcUrl}?command=in_play&input=${encodeURIComponent(movie.path)}`, vlcAuthHeader)
+          console.log("VLC response:", await response.text())
+        })
       next()
     },
     /**
