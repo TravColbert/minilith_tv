@@ -203,7 +203,7 @@ body {
 
 .media-thumbnail {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 2;
   object-fit: cover;
   background-color: var(--color-border);
 }

@@ -3,6 +3,8 @@ const path = require("path")
 
 
 module.exports = function (app) {
+  const model = app.locals.models['movies']
+
   const vlcAuthHeader = {
     method: 'GET',
     headers: {
@@ -10,21 +12,39 @@ module.exports = function (app) {
     }
   }
 
-  const getLibrary = async function (term=null) {
-    let files = []
-    // get a list of files from the filesystem by reading from the libraryPaths
-    const fullPath = path.join(app.locals.libraryPaths[0])
+  /**
+   * Base URL for TMDB API
+   */
+  const tmdbUrl = 'https://api.themoviedb.org/3'
+
+  /**
+   * TMDB API authentication header
+   */
+  const tmdbAuthHeader = {
+    accept: 'application/json',
+    Authorization: `Bearer ${app.locals.tmdbAccessToken}`
+  }
+
+  const tmdbPreferredLanguage = 'en-US'
+
+  const getLibraryByFsPath = async function (libraryPath, term = null) {
+    const files = []
+
     // If the directory does not exist, return an empty array
     try {
-      await fs.access(fullPath)
+      await fs.access(libraryPath)
     } catch (err) {
-      console.warn(`Library path does not exist: ${fullPath}`)
-      return files
+      console.warn(`Library path does not exist: ${libraryPath}`)
+      return []
     }
-    const dir = await fs.opendir(fullPath)
+
+    const dir = await fs.opendir(libraryPath)
+
     for await (const dirent of dir) {
       if (dirent.isFile()) {
         const ext = path.extname(dirent.name).toLowerCase()
+
+        // Make sure it is one of the approved file extensions
         if (app.locals.mediaExtensions.includes(ext)) {
           files.push({
             name: dirent.name,
@@ -33,7 +53,23 @@ module.exports = function (app) {
             path: dirent.parentPath
           })
         }
+      } else if (dirent.isDirectory()) {
+        // Recursively read subdirectories
+        const subdirectoryPath = path.join(libraryPath, dirent.name)
+        const subdirectoryFiles = await getLibraryByFsPath(subdirectoryPath, term)
+        files.push(...subdirectoryFiles)
       }
+    }
+
+    return files
+  }
+
+  const getLibrary = async function (term = null) {
+    let files = []
+
+    // get a list of files from the filesystem by reading from the libraryPaths
+    for await (const libraryPath of app.locals.libraryPaths) {
+      files = files.concat(await getLibraryByFsPath(libraryPath))
     }
 
     // Filter for search terms
@@ -47,6 +83,129 @@ module.exports = function (app) {
     files.sort((a, b) => a.name.localeCompare(b.name))
 
     return files
+  }
+
+  /**
+   * One-way sync from filesystem to database
+   * @param {*} files 
+   */
+  const syncFsToDb = async function (files) {
+    for await (const file of files) {
+      const filePath = path.join(file.path, file.name)
+      console.log(filePath)
+      const [entry, created] = await createStubEntry(filePath)
+      if (created) {
+        console.log(`Created new database entry for file: ${filePath}`)
+      }
+    }
+  }
+
+  /**
+   * Creates DB entry for the provided file path if it does not already exist
+   * 
+   * Sets title the filename, for starters.
+   * 
+   * Sets needsResync to true so that a later process can fill in metadata from TMDB
+   * @param {*} filePath 
+   * @returns 
+   */
+  const createStubEntry = async function (filePath) {
+    return await model.findOrCreate({
+      where: {
+        path: filePath
+      },
+      defaults: {
+        title: path.basename(filePath, path.extname(filePath)),
+        needsResync: true
+      }
+    })
+  }
+
+  const syncDbToTmdb = async function () {
+    console.log("Syncing database entries to TMDB metadata...")
+    // Find all records where needsResync is true
+    const recordsToSync = await model.findAll({
+      where: {
+        needsResync: true
+      }
+    })
+
+    for await (const record of recordsToSync) {
+      // Fetch metadata from TMDB and update the record
+      await fetchMetadataFromTmdb(record)
+    }
+  }
+
+  const fetchMetadataFromTmdb = async function (record) {
+    // Placeholder function to fetch metadata from TMDB
+    // Use TMDB API to get metadata based on the title or other criteria
+    // Update the record with fetched metadata
+    console.log(`Fetching metadata for record ID ${record.id} with title "${record.title}" from TMDB...`)
+    // Example: Fetch by search
+    const searchUrl = `${tmdbUrl}/search/movie?query=${encodeURIComponent(record.title)}&include_adult=false&language=${tmdbPreferredLanguage}`
+    const response = await fetch(searchUrl, { headers: tmdbAuthHeader })
+    const data = await response.json()
+
+    // There's a lot of crazy stuff out there in the TMDB data.
+    // Let's sort by popularity to try to get the most relevant result first
+    data.results.sort((a, b) => b.popularity - a.popularity)
+
+
+    console.dir(data, { depth: null })
+    // Need to decide how to handle multiple results, for now just take the first one
+
+    console.dir(app.locals.tmdbConfiguration, { depth: null })
+
+    if (data.results && data.results.length > 0) {
+      const movieData = data.results[0]
+      record.tmdbId = movieData.id
+      record.title = movieData.title
+      // Truncate desciption to 1000 characters
+      record.description = movieData.overview ? movieData.overview.substring(0, 1000) : null
+      record.needsResync = false
+      record.poster = app.locals.tmdbConfiguration.base_url + app.locals.tmdbConfiguration.poster_sizes[0] + movieData.poster_path
+      record.backdrop = app.locals.tmdbConfiguration.base_url + app.locals.tmdbConfiguration.backdrop_sizes[0] + movieData.backdrop_path
+      // Add more fields as needed
+      console.log(`Updating record ID ${record.id} with TMDB ID ${movieData.id}`)
+      return await record.save()
+    } else {
+      console.log(`No TMDB results found for title "${record.title}"`)
+      return
+    }
+  }
+
+  /**
+   * Takes list of retrieved files in the library and hydrates their
+   * entries with the metadata in the database.
+   * 
+   * THIS IS INTENDED FOR RENDERING TO CLIENT
+   * 
+   * This really doesn't hydrate entries. It just uses the file paths as the lookup key
+   * 
+   * @param {*} keepId 
+   * @param {*} mergeId 
+   */
+  const hydrateLibraryEntries = async function (files) {
+    const hydratedEntries = []
+
+    for await (const file of files) {
+      const filePath = path.join(file.path, file.name)
+      const entry = await model.findOne({
+        where: {
+          path: filePath
+        }
+      })
+      hydratedEntries.push({
+        id: entry.id,
+        path: entry.path,
+        title: entry.title,
+        description: entry.description,
+        favorite: entry.favorite,
+        poster: entry.poster,
+        backdrop: entry.backdrop,
+      })
+    }
+    return hydratedEntries
   }
 
   const getFile = function (filename) {
@@ -85,12 +244,56 @@ module.exports = function (app) {
   }
 
   return {
+    /**
+     * Sync the media library filesystem to the database/cache
+     * 
+     */
+    syncLibrary: async function (req, res, next) {
+      app.locals.debug && console.debug("Syncing library...")
+      getLibrary()
+        .then(library => syncFsToDb(library))
+        .then(() => syncDbToTmdb())
+        .then(() => {
+          app.locals.debug && console.debug("Library sync complete.")
+        })
+        .catch(error => {
+          console.error("Error during library sync:", error)
+        })
+
+      res.send("Library sync started.")
+    },
+    /**
+     * Fetch the media library for display
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     library: async function (req, res, next) {
-      app.locals.debug && console.debug("Compiling library...")
+      app.locals.debug && console.debug("Fetching library...")
       const searchTerm = req.query.search || null
-      res.locals.render.library = await app.locals.cache(`library${searchTerm}`, async () => { return await getLibrary(searchTerm) })
+      // getLibrary(searchTerm)
+      //   .then(library => hydrateLibraryEntries(library))
+      //   .then(hydratedLibrary => {
+      //     res.locals.render.library = hydratedLibrary
+      //     next()
+      //   })
+      //   .catch(error => {
+      //     console.error("Error fetching library:", error)
+      //     next(error)
+      //   })
+
+      // Althernative with caching
+      //
+      res.locals.render.library = await app.locals.cache(`library${searchTerm}`, async () => { return await hydrateLibraryEntries(await getLibrary(searchTerm)) })
+      // console.dir(res.locals.render.library, { depth: null })
       next()
     },
+    /**
+     * PLAYS/STARTS the VLC player with the provided media
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     play: async function (req, res, next) {
       const id = req.params.id
       console.log(`Playing media item: ${id}`)
@@ -98,6 +301,12 @@ module.exports = function (app) {
       console.log("VLC response:", await response.text())
       next()
     },
+    /**
+     * PAUSES the VLC player
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     pause: async function (req, res, next) {
       const id = req.params.id
       console.log(`Pausing media item: ${id}`)
@@ -105,6 +314,13 @@ module.exports = function (app) {
       console.log("VLC response:", await response.text())
       next()
     },
+    /**
+     * Gets the status of the VLC player itself.
+     * No library information is included here.
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     status: async function (req, res, next) {
       console.log("Fetching VLC status")
       let xmlText
@@ -136,6 +352,12 @@ module.exports = function (app) {
 
       next()
     },
+    /**
+     * STOPs the VLC player
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     stop: async function (req, res, next) {
       const id = req.params.id
       console.log(`Stopping media item: ${id}`)
@@ -143,24 +365,48 @@ module.exports = function (app) {
       console.log("VLC response:", await response.text())
       next()
     },
+    /**
+     * Increases the VLC player volume
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     volumeUp: async function (req, res, next) {
       console.log("Increasing VLC volume")
       const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=%2B10`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       next()
     },
+    /**
+     * Decreases the VLC player volume
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     volumeDown: async function (req, res, next) {
       console.log("Decreasing VLC volume")
       const response = await fetch(`${app.locals.vlcUrl}?command=volume&val=%2D10`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       next()
     },
+    /**
+     * Seeks forward 10 seconds in the VLC player
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     seekPlus10Seconds: async function (req, res, next) {
       console.log("Seeking forward 10 seconds in VLC")
       const response = await fetch(`${app.locals.vlcUrl}?command=seek&val=%2B10`, vlcAuthHeader)
       console.log("VLC response:", await response.text())
       next()
     },
+    /**
+     * Seeks backward 10 seconds in the VLC player
+     * @param {*} req 
+     * @param {*} res 
+     * @param {*} next 
+     */
     seekMinus10Seconds: async function (req, res, next) {
       console.log("Seeking backward 10 seconds in VLC")
       const response = await fetch(`${app.locals.vlcUrl}?command=seek&val=%2D10`, vlcAuthHeader)

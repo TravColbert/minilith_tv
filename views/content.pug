@@ -3,18 +3,18 @@ ul.media-list
     if library.length > 0
       each file in library
         li.media-item(
-          hx-get=`/library/${file.name}/play`
+          hx-get=`/library/${file.id}/play`
           hx-target="#bottom-toolbar"
           hx-select="#bottom-toolbar"
           hx-swap="outerHTML"
         )
           img.media-thumbnail(
-            src='/images/placeholder.png'
-            alt=`Thumbnail for ${file.name}`
+            src=file.poster
+            alt=`Thumbnail for ${file.title}`
           )
           .media-info
-            h3.media-title= file.name
-            p.media-description= file.path
+            h3.media-title= file.title
+            p.media-description= file.description
   else
     .empty
       h3 No files found

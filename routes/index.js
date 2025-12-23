@@ -8,6 +8,9 @@ module.exports = function (app) {
   // Require the controller with the same name as the router
   const controller = require(path.join('../', app.locals.controllerPath, currentRouteName))(app)
 
+  router.route("/library/sync")
+    .get(controller.syncLibrary)
+
   router.route("/library/stop")
     .get(controller.stop, controller.status, controller.render)
 
