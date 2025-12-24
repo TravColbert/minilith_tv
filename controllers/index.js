@@ -64,6 +64,13 @@ module.exports = function (app) {
     return files
   }
 
+  /**
+   * Collect a list of files based on the 'libraryPaths' value in the config
+   * List is filtered by a search term if provided.
+   * 
+   * @param {*} term 
+   * @returns 
+   */
   const getLibrary = async function (term = null) {
     let files = []
 
@@ -136,13 +143,22 @@ module.exports = function (app) {
     }
   }
 
+  /**
+   * Gets metadata from TMDB by a query based on the record's title.
+   * The record's title is based on either the filename or previously fetched 
+   * 'title' metadata.
+   * 
+   * @param {*} record 
+   * @returns 
+   */
   const fetchMetadataFromTmdb = async function (record) {
     // Placeholder function to fetch metadata from TMDB
     // Use TMDB API to get metadata based on the title or other criteria
     // Update the record with fetched metadata
-    console.log(`Fetching metadata for record ID ${record.id} with title "${record.title}" from TMDB...`)
+    const searchTitle = santizeTmdbString(record.title)
+    console.log(`Fetch metadata for record ID ${record.id}: "${record.title}" (${searchTitle})...`)
     // Example: Fetch by search
-    const searchUrl = `${tmdbUrl}/search/movie?query=${encodeURIComponent(record.title)}&include_adult=false&language=${tmdbPreferredLanguage}`
+    const searchUrl = `${tmdbUrl}/search/movie?query=${encodeURIComponent(searchTitle)}&include_adult=false&language=${tmdbPreferredLanguage}`
     const response = await fetch(searchUrl, { headers: tmdbAuthHeader })
     const data = await response.json()
 
@@ -150,18 +166,15 @@ module.exports = function (app) {
     // Let's sort by popularity to try to get the most relevant result first
     data.results.sort((a, b) => b.popularity - a.popularity)
 
-
     console.dir(data, { depth: null })
     // Need to decide how to handle multiple results, for now just take the first one
-
-    console.dir(app.locals.tmdbConfiguration, { depth: null })
 
     try {
       if (data.results && data.results.length > 0) {
         const movieData = data.results[0]
         record.tmdbId = movieData.id
         // Truncate title to 100 chars
-        record.title = movieData.title.substring(0,100)
+        record.title = movieData.title.substring(0, 100)
         // Truncate desciption to 1000 characters
         record.description = movieData.overview ? movieData.overview.substring(0, 1000) : null
         record.needsResync = false
@@ -174,10 +187,30 @@ module.exports = function (app) {
         console.log(`No TMDB results found for title "${record.title}"`)
         return
       }
-    } catch(e) {
+    } catch (e) {
       console.error(e)
       return false
     }
+  }
+
+  /**
+   * Removes confusing characters from the search string sent to TMDB
+   * All non-alphanumeric characters are removed except spaces and hyphens
+   * @param {*} str 
+   * @returns 
+   */
+  const santizeTmdbString = function (str) {
+    // trim whitespace
+    str = str.toLowerCase()
+    // There are other strings that throw off the search too, like "1080p", "720p", etc.
+    str = str.replace(/\b(1080p|720p|480p|x264|x265|h264|h265|bluray|brrip|webrip|web-dl|hdrip|dvdrip|ppvrip|iflix|www|dvdscr|cam)\b/gi, '')
+    str = str.replace(/\b(xvid|mp3|mp3-xvid|ac3-evo|ac3)\b/gi, '')
+    // Replace non-alphanumeric characters (except spaces and hyphens) with spaces
+    str = str.replace(/[^a-zA-Z0-9&\-]/g, ' ')
+    // Collapse multiple spaces into one
+    str = str.replace(/\s+/g, ' ')
+
+    return str.trim()
   }
 
   /**
