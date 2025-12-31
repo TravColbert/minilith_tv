@@ -13,6 +13,26 @@ module.exports = function (app) {
   };
 
   /**
+   * Start the VLC server, if needed
+   */
+  const startMediaServer = async function () {
+    const { spawn } = require("child_process");
+    const mediaServer = spawn(app.locals.mediaServerCommand);
+
+    mediaServer.stdout.on("data", (data) => {
+      console.log(`media server stdout: ${data}`);
+    });
+
+    mediaServer.stderr.on("data", (data) => {
+      console.log(`media server stderr: ${data}`);
+    });
+
+    mediaServer.on("error", (err) => {
+      console.log(`failed to start media server: ${err.message}`);
+    });
+  };
+
+  /**
    * Base URL for TMDB API
    */
   const tmdbUrl = "https://api.themoviedb.org/3";
@@ -452,6 +472,7 @@ module.exports = function (app) {
 
           res.locals.render.file = {
             id: movie.id,
+            poster: movie.poster || null,
             searchTitle: movie.searchTitle,
           };
 
@@ -465,7 +486,7 @@ module.exports = function (app) {
     },
     update: async function (req, res, next) {
       const id = req.params.id;
-      model
+      await model
         .findByPk(id)
         .then(async (movie) => {
           if (!movie) {
@@ -478,6 +499,8 @@ module.exports = function (app) {
           await movie.save();
 
           const recordMetaData = extractDbMetaData(movie);
+
+          console.dir(recordMetaData);
 
           res.locals.render.template = "movie";
 
