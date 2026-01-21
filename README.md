@@ -1,6 +1,6 @@
-# Minilith TV
+# Seedpod TV
 
-This is an add-on module for Minilith that creates a media-center for your dumb (or dumbed) TV.
+This is an add-on module for Seedpod that creates a media-center for your dumb (or dumbed) TV.
 
 All you need is a computer that is capable of:
 
@@ -14,7 +14,7 @@ All you need is a computer that is capable of:
 In very general terms, all you need to do to enjoy a simple media-player experience is:
 
 1. Install and start VLC so that it listens to an HTTP port
-2. Install, configure and start Minilith TV
+2. Install, configure and start Seedpod TV
 
 ### 1. Install and Start VLC
 
